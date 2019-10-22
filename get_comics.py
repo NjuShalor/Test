@@ -3,6 +3,7 @@
 @Author: Shalor
 @Date: 2019-10-21 15:45:27
 '''
+import os
 from urllib.error import URLError
 from urllib.request import urlopen
 import urllib
@@ -19,7 +20,6 @@ from bs4 import BeautifulSoup
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-
 
 
 def decode_page(page_bytes, charsets=('utf-8',)):
@@ -76,26 +76,45 @@ if __name__ == "__main__":
     # print(len(url_list))
 
     # 将获得的所有的话数，加上前缀获得picture所在的页面
-    for index in range(1):
+    completed_num = 0
+    for index in range(10):
         page_index = 0
+        local_file = "./One_Piece_Comics/"+url_list[index][:-1]
+        if not os.path.exists(local_file):
+            os.mkdir(local_file)
+        picture_lists = []
         while True:
-            
-            url = "https://manhua.fzdm.com/02/"+url_list[index]+"index_"+str(page_index)+".html"
-            # print(url)
-            picture_html = get_page_html(url)
-            picture_pattern = r'var mhurl=".*?\.jpg"'
-            picture_url_list = get_latest_page(picture_html,picture_pattern)
-            # print(picture_url_list)
-            picture_url_part = picture_url_list[0][11:-1]
-            full_picture_url = ""
-            if picture_url_part[:4] in ["2016","2017","2018","2019"]:
-                full_picture_url = "http://p1.manhuapan.com/"+picture_url_part
-            else:
-                full_picture_url = "http://p0.manhuapan.com/"+picture_url_part
-            urllib.request.urlretrieve(full_picture_url, "999.jpg")
-            page_index += 1
-            break
-            
+            try:
+                url = "https://manhua.fzdm.com/02/" + \
+                    url_list[index]+"index_"+str(page_index)+".html"
+                # print(url)
+                picture_html = get_page_html(url)
+                picture_pattern = r'var mhurl=".*?\.jpg"'
+                picture_url_list = get_latest_page(
+                    picture_html, picture_pattern)
+                print(picture_url_list)
+                picture_url_part = picture_url_list[0][11:-1]
+                full_picture_url = ""
+                if picture_url_part[:4] in ["2016", "2017", "2018", "2019"]:
+                    full_picture_url = "http://p1.manhuapan.com/"+picture_url_part
+                else:
+                    full_picture_url = "http://p0.manhuapan.com/"+picture_url_part
+                # urllib.request.urlretrieve(full_picture_url, "999.jpg")
+                picture_lists.append(full_picture_url)
+                page_index += 1
+            except:
+                break
+        print("Downloading %s...Completed:%d/%d." %
+              (url_list[index][:-1], completed_num, 10))
+        for i in range(len(picture_lists)):
+            picture_url = picture_lists[i]
+            urllib.request.urlretrieve(
+                picture_url, local_file+"/"+str(i+1)+".jpg")
+        completed_num += 1
 
-    # urllib.request.urlretrieve("http://p0.manhuapan.com/2/Vol_030/008ao.jpg", "local-filename.jpg")
-    
+
+    # picture_html = get_page_html("https://manhua.fzdm.com/02/959/index_17.html")
+    # picture_pattern = r'var mhurl=".*?\.jpg"'
+    # picture_url_list = get_latest_page(
+    #     picture_html, picture_pattern)
+    # print(picture_url_list)
