@@ -111,10 +111,3 @@ if __name__ == "__main__":
             urllib.request.urlretrieve(
                 picture_url, local_file+"/"+str(i+1)+".jpg")
         completed_num += 1
-
-
-    # picture_html = get_page_html("https://manhua.fzdm.com/02/959/index_17.html")
-    # picture_pattern = r'var mhurl=".*?\.jpg"'
-    # picture_url_list = get_latest_page(
-    #     picture_html, picture_pattern)
-    # print(picture_url_list)
