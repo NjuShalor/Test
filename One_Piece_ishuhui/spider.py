@@ -20,6 +20,8 @@ from selenium.common.exceptions import NoSuchElementException
 # # options.add_argument("--headless")
 # browser = webdriver.Chrome(options=options)
 
+keyword = '航海王'
+
 browser = webdriver.Chrome()
 browser.maximize_window()
 
@@ -66,17 +68,54 @@ def download_picture(pic_url, pic_name, file_path):
         f.write(image.content)
 
 
+def get_search_result(keyword):
+    base_url = 'https://ac.qq.com/Comic/searchList?search='+keyword+'&page=1'
+    browser.get(base_url)
+    try:
+        p_element = browser.find_element_by_css_selector('body > div.mod_958wr.mod_gbd.mod_wbg.mod_of.ma.mod_all_cata_wr > p.ma.mod_of.mod_bbd.all_total_num')
+        print('搜索结果总共有%s条'%p_element.text)
+        result_list = get_detail_search_result()
+        page = 2
+        while True:
+            browser.get('https://ac.qq.com/Comic/searchList?search='+keyword+'&page='+str(page))
+            temp_result = get_detail_search_result()
+            if temp_result:
+                result_list += get_detail_search_result()
+                page += 1
+            else:
+                break
+        print(result_list)
+
+    except NoSuchElementException:
+        print('查无结果')
+        new_keyword = input('请重新输入想下载的漫画名:')
+        get_search_result(new_keyword)
+
+def get_detail_search_result():
+    href_list = browser.find_elements_by_css_selector('body > div.mod_958wr.mod_gbd.mod_wbg.mod_of.ma.mod_all_cata_wr > ul > li > h4 > a')
+    try:
+        no_search_element = browser.find_element_by_css_selector('body > div.mod_958wr.mod_gbd.mod_wbg.mod_of.ma.mod_all_cata_wr > div.mod_960wr.mod_of.search_wr > span')
+        return []
+    except NoSuchElementException:
+        result = []
+        for item in href_list:
+            title = item.get_attribute('title')
+            href = item.get_attribute('href')
+            result.append((title,href))
+        return result
+
 def main(page):
     url = 'https://ac.qq.com/ComicView/index/id/505430/cid/'+str(page)
     html = get_detail(url)
 
 
 if __name__ == "__main__":
-    max_page = get_latest_page('https://ac.qq.com/Comic/comicInfo/id/505430')
-    print("Now downloading comics...")
-    for page in range(1, 21):
-        try:
-            main(page)
-        except NoSuchElementException:
-            pass
-    browser.close()
+    get_search_result("火影忍者")
+    # max_page = get_latest_page('https://ac.qq.com/Comic/comicInfo/id/505430')
+    # print("Now downloading comics...")
+    # for page in range(1, 21):
+    #     try:
+    #         main(page)
+    #     except NoSuchElementException:
+    #         pass
+    # browser.close()
