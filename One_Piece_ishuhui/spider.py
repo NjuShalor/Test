@@ -26,7 +26,7 @@ browser = webdriver.Chrome()
 browser.maximize_window()
 
 
-def get_detail(url):
+def get_detail(url,comic_name):
     browser.get(url)
     time.sleep(2)
     title = browser.find_element_by_css_selector(
@@ -42,7 +42,7 @@ def get_detail(url):
         while src.endswith('pixel.gif'):
             time.sleep(2)
             src = images[i].get_attribute('src')
-        download_picture(src, str(i+1), './海贼王/'+title+'/')
+        download_picture(src, str(i+1), './'+comic_name+'/'+title+'/')
         total_height += height
         js = base_js + str(total_height)
         browser.execute_script(js)
@@ -51,9 +51,11 @@ def get_detail(url):
 
 def get_latest_page(url):
     doc = pq(url=url)
+    title = doc('#special_bg > div:nth-child(3) > div.ui-left.works-intro-wr > div.works-intro.clearfix > div.works-intro-detail.ui-left > div.works-intro-text > div.works-intro-head.clearfix > h2 > strong')
+    title = title.text()
     newest_element = doc(
         '#chapter > div.works-chapter-list-wr.ui-left > ol.chapter-page-new.works-chapter-list > li > p:last-child > span:last-child > a')
-    print("海贼王最新一话是:", newest_element.text())
+    print(title,"最新一话是:", newest_element.text())
     href = newest_element.attr('href')
     index = len(href)-1-href[::-1].find('/')
     newest_page = int(href[index+1:])
@@ -72,50 +74,69 @@ def get_search_result(keyword):
     base_url = 'https://ac.qq.com/Comic/searchList?search='+keyword+'&page=1'
     browser.get(base_url)
     try:
-        p_element = browser.find_element_by_css_selector('body > div.mod_958wr.mod_gbd.mod_wbg.mod_of.ma.mod_all_cata_wr > p.ma.mod_of.mod_bbd.all_total_num')
-        print('搜索结果总共有%s条'%p_element.text)
+        p_element = browser.find_element_by_css_selector(
+            'body > div.mod_958wr.mod_gbd.mod_wbg.mod_of.ma.mod_all_cata_wr > p.ma.mod_of.mod_bbd.all_total_num')
+        print('搜索结果总共有%s条' % p_element.text)
         result_list = get_detail_search_result()
         page = 2
         while True:
-            browser.get('https://ac.qq.com/Comic/searchList?search='+keyword+'&page='+str(page))
+            browser.get('https://ac.qq.com/Comic/searchList?search=' +
+                        keyword+'&page='+str(page))
             temp_result = get_detail_search_result()
             if temp_result:
                 result_list += get_detail_search_result()
                 page += 1
             else:
                 break
-        print(result_list)
-
+        return result_list
     except NoSuchElementException:
         print('查无结果')
         new_keyword = input('请重新输入想下载的漫画名:')
         get_search_result(new_keyword)
 
+
 def get_detail_search_result():
-    href_list = browser.find_elements_by_css_selector('body > div.mod_958wr.mod_gbd.mod_wbg.mod_of.ma.mod_all_cata_wr > ul > li > h4 > a')
+    href_list = browser.find_elements_by_css_selector(
+        'body > div.mod_958wr.mod_gbd.mod_wbg.mod_of.ma.mod_all_cata_wr > ul > li > h4 > a')
     try:
-        no_search_element = browser.find_element_by_css_selector('body > div.mod_958wr.mod_gbd.mod_wbg.mod_of.ma.mod_all_cata_wr > div.mod_960wr.mod_of.search_wr > span')
+        no_search_element = browser.find_element_by_css_selector(
+            'body > div.mod_958wr.mod_gbd.mod_wbg.mod_of.ma.mod_all_cata_wr > div.mod_960wr.mod_of.search_wr > span')
         return []
     except NoSuchElementException:
         result = []
         for item in href_list:
             title = item.get_attribute('title')
             href = item.get_attribute('href')
-            result.append((title,href))
+            result.append((title, href))
         return result
 
-def main(page):
-    url = 'https://ac.qq.com/ComicView/index/id/505430/cid/'+str(page)
-    html = get_detail(url)
+
+def main(newest_ten_pages = True):
+    result_list = get_search_result("海贼王")
+    print("搜索结果如下:")
+    for i in range(len(result_list)):
+        print(i,"\t",result_list[i][0],"\t",result_list[i][1])
+    index = int(input("请选择想要下载的动漫序号:"))
+    comic_name = result_list[index][0]
+    base_url = result_list[index][1]
+    max_page = get_latest_page(base_url)
+    if newest_ten_pages:
+        for page in range(max_page,max(max_page-10,0),-1):
+            try:
+                url = 'https://ac.qq.com/ComicView/index/id/'+base_url[-6:]+'/cid/'+str(page)
+                html = get_detail(url,comic_name)
+            except NoSuchElementException:
+                pass
+        browser.close()
+    else:
+        for page in range(1,max_page+1):
+            try:
+                url = 'https://ac.qq.com/ComicView/index/id/'+base_url[-6:]+'/cid/'+str(page)
+                html = get_detail(url,comic_name)
+            except NoSuchElementException:
+                pass
+        browser.close()
 
 
 if __name__ == "__main__":
-    get_search_result("火影忍者")
-    # max_page = get_latest_page('https://ac.qq.com/Comic/comicInfo/id/505430')
-    # print("Now downloading comics...")
-    # for page in range(1, 21):
-    #     try:
-    #         main(page)
-    #     except NoSuchElementException:
-    #         pass
-    # browser.close()
+    main()
